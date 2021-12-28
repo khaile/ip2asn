@@ -1,3 +1,4 @@
+use std::convert::Infallible as ConvertError;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{BufReader, Error};
@@ -44,25 +45,23 @@ fn read_file(filename: &str) -> Result<Vec<IpRange>, Error> {
     let mut lines: Vec<IpRange> = Vec::new();
 
     for line in buf_reader.lines().flatten() {
-        lines.push(line_to_ip_range(&line));
+        match line_to_ip_range(&line) {
+            Ok(range) => lines.push(range),
+            Err(e) => println!("{}", e),
+        }
     }
 
     Ok(lines)
 }
 
-fn line_to_ip_range(line: &str) -> IpRange {
-    let mut parts = line.split('\t');
-    let start_ip = parts.next().unwrap().trim().parse().unwrap();
-    let end_ip = parts.next().unwrap().trim().parse().unwrap();
-    let number = parts.next().unwrap().trim().parse().unwrap();
-    let country = parts.next().unwrap().trim().to_owned();
-    let description = parts.next().unwrap().trim().to_owned();
+fn line_to_ip_range(line: &str) -> Result<IpRange, ConvertError> {
+    let mut parts = line.split('\t').map(|s| s.trim());
 
-    IpRange {
-        start_ip,
-        end_ip,
-        number,
-        country,
-        description,
-    }
+    Ok(IpRange {
+        start_ip: parts.next().unwrap().parse().unwrap(),
+        end_ip: parts.next().unwrap().parse().unwrap(),
+        number: parts.next().unwrap().parse().unwrap(),
+        country: parts.next().unwrap().to_string(),
+        description: parts.next().unwrap().to_string(),
+    })
 }
